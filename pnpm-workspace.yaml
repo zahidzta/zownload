@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  esbuild: true
+  sharp: true
+injectWorkspacePackages: true
+
+fetchTimeout: 120000
+fetchRetries: 5
+fetchRetryMaxtimeout: 60000
