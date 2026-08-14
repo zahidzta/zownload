@@ -4,6 +4,10 @@
   "description": "",
   "private": true,
   "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "docker compose up --build",
+    "start:detached": "docker compose up --build -d",
+    "stop": "docker compose down",
     "dev:backend": "pnpm --filter backend dev",
     "dev:frontend": "pnpm --filter frontend dev"
   },
