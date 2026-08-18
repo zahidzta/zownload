@@ -60,26 +60,34 @@ export async function runDownload(
 
     await new Promise<void>((resolve, reject) => {
         const proc = spawn(YTDLP_BIN, args)
-
         let buffer = ""
-        const handleChunk = (chunk: Buffer) => {
-            buffer += chunk.toString()
+        let errorLines: string[] = []
+
+        const handleChunk = (chunk: Buffer, isStderr: boolean) => {
+            const text = chunk.toString()
+            buffer += text
             const lines = buffer.split("\n")
             buffer = lines.pop() ?? ""
-
             for (const line of lines) {
                 const update = parseProgressLine(line)
                 if (update && onProgress) onProgress(update)
+                else if (isStderr || line.toLowerCase().includes("error")) {
+                    errorLines.push(line)
+                }
             }
         }
 
-        proc.stdout.on("data", handleChunk)
-        proc.stderr.on("data", handleChunk)
+        proc.stdout.on("data", (chunk) => handleChunk(chunk, false))
+        proc.stderr.on("data", (chunk) => handleChunk(chunk, true))
 
         proc.on("error", reject)
         proc.on("close", (code) => {
-            if (code === 0) resolve()
-            else reject(new Error(`yt-dlp exited with code ${code}`))
+            if (code === 0) {
+                resolve()
+            } else {
+                const detail = errorLines.slice(-5).join(" | ") || "no error output captured"
+                reject(new Error(`yt-dlp exited with code ${code}: ${detail}`))
+            }
         })
     })
 
