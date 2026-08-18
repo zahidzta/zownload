@@ -9,6 +9,7 @@ import { HistoryCard } from "@/components/HistoryCard";
 import { API_URL } from "@/lib/config";
 import { getSocket } from "@/lib/socket";
 import { getHistory, addHistoryEntry, type HistoryEntry } from "@/lib/history";
+import { FiTrash2 } from "react-icons/fi";
 
 type ColaState =
     | { kind: "single"; percent: number; speed?: string; eta?: string }
@@ -217,7 +218,16 @@ export default function HomePage() {
                 </div>
 
                 <div className="border border-neutral-800 rounded-xl p-4">
-                    <h2 className="text-sm font-medium text-neutral-400 mb-2">History</h2>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-sm font-medium text-neutral-400">History</h2>
+                        <button
+                            onClick={() => setHistory([])}
+                            className="p-1.5 text-neutral-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors flex items-center justify-center"
+                            title="Clear History"
+                        >
+                            <FiTrash2 size={16} />
+                        </button>
+                    </div>
                     <HistoryCard entries={History} onRedownload={handleRedownload} />
                 </div>
             </aside>
