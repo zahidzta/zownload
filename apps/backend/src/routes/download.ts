@@ -8,6 +8,29 @@ import path from "node:path"
 
 export const downloadRouter = Router()
 
+const activeDownloads = new Map<string, AbortController>()
+
+function registerDownload(socketId: string, controller: AbortController) {
+    activeDownloads.set(socketId, controller)
+}
+
+function unregisterDownload(socketId: string) {
+    activeDownloads.delete(socketId)
+}
+
+function cancelDownload(socketId: string) {
+    const controller = activeDownloads.get(socketId)
+    if (controller) {
+        controller.abort()
+        activeDownloads.delete(socketId)
+    }
+}
+
+downloadRouter.post("/download/cancel", (req, res) => {
+    const { socketId } = req.body ?? {}
+    if (socketId) cancelDownload(socketId)
+    res.status(200).json({ success: true })
+})
 downloadRouter.post("/download", async (req, res) => {
     const { url, formatSelector, format, socketId } = req.body ?? {}
 
@@ -20,12 +43,16 @@ downloadRouter.post("/download", async (req, res) => {
         if (socketId) io.to(socketId).emit(event, payload)
     }
 
+    const abortController = new AbortController()
+    if (socketId) registerDownload(socketId, abortController)
+
     try {
         const { filePath, fileName, cleanup } = await runDownload(
             url,
             formatSelector,
             format,
-            (update) => emitProgress("download:progress", update)
+            (update) => emitProgress("download:progress", update),
+            abortController.signal
         )
 
         emitProgress("download:complete", { fileName })
@@ -42,16 +69,27 @@ downloadRouter.post("/download", async (req, res) => {
         const stream = createReadStream(filePath)
         stream.pipe(res)
         stream.on("close", () => {
+            if (socketId) unregisterDownload(socketId)
             cleanup().catch((err) => console.log("Cleanup failed:", err))
         })
         stream.on("error", (err) => {
+            if (socketId) unregisterDownload(socketId)
             console.error("Stream error:", err)
             cleanup().catch(() => { })
         })
     } catch (err) {
+        if (socketId) unregisterDownload(socketId)
+        
+        if (abortController.signal.aborted) {
+            console.log("Download aborted by user")
+            return
+        }
+
         console.log("Download error: ", err)
         emitProgress("download:error", { message: "Download failed." })
-        res.status(500).json({ error: "Download failed" })
+        if (!res.headersSent) {
+            res.status(500).json({ error: "Download failed" })
+        }
     }
 })
 
@@ -67,10 +105,21 @@ downloadRouter.post("/download/playlist", (req, res) => {
         if (socketId) io.to(socketId).emit(event, payload)
     }
 
-    processPlaylist(jobId, items, formatSelector, format, emit).catch((err) => {
-        console.error("Playlist processing crashed:", err)
-        emit("playlist:error", { message: "Playlist processing failed unexpectedly." })
-    })
+    const abortController = new AbortController()
+    if (socketId) registerDownload(socketId, abortController)
+
+    processPlaylist(jobId, items, formatSelector, format, emit, abortController.signal)
+        .catch((err) => {
+            if (abortController.signal.aborted) {
+                console.log("Playlist processing aborted by user")
+                return
+            }
+            console.error("Playlist processing crashed:", err)
+            emit("playlist:error", { message: "Playlist processing failed unexpectedly." })
+        })
+        .finally(() => {
+            if (socketId) unregisterDownload(socketId)
+        })
 
     res.status(202).json({ jobId, message: "Playlist processing started." })
 })

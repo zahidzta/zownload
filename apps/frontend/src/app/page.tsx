@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { AnalyzeResult, TargetFormat } from "@zownload/shared";
 import { UrlInputForm } from "@/components/UrlInputForm";
 import { SingleElementView } from "@/components/SingleElementView";
@@ -24,6 +24,7 @@ export default function HomePage() {
     const [format, setFormat] = useState<TargetFormat>("mp3");
     const [cola, setCola] = useState<ColaState>(null);
     const [History, setHistory] = useState<HistoryEntry[]>([]);
+    const activeFetch = useRef<AbortController | null>(null);
 
     useEffect(() => {
         setHistory(getHistory());
@@ -78,37 +79,52 @@ export default function HomePage() {
         const socket = getSocket();
         setCola({ kind: "single", percent: 0 });
 
-        const res = await fetch(`${API_URL}/api/download`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: originalUrl, formatSelector, format, socketId: socket.id }),
-        });
+        const abortController = new AbortController();
+        activeFetch.current = abortController;
 
-        if (!res.ok) {
+        try {
+            const res = await fetch(`${API_URL}/api/download`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: originalUrl, formatSelector, format, socketId: socket.id }),
+                signal: abortController.signal
+            });
+
+            if (!res.ok) {
+                setCola(null);
+                return;
+            }
+
+            const blob = await res.blob();
+            const disposition = res.headers.get("Content-Disposition") ?? "";
+            const match = disposition.match(/filename="?(.+?)"?$/);
+            const fileName = match ? decodeURIComponent(match[1]) : "download";
+
+            setHistory(
+                addHistoryEntry({
+                    title: result.title,
+                    sizeMB: blob.size / (1024 * 1024),
+                    format,
+                    sourceUrl: originalUrl,
+                    isPlaylist: false,
+                })
+            );
+
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        } catch (err: any) {
+            if (err.name === 'AbortError') {
+                console.log("Download aborted from frontend");
+            } else {
+                console.error("Single download fetch error:", err);
+            }
             setCola(null);
-            return;
+        } finally {
+            activeFetch.current = null;
         }
-
-        const blob = await res.blob();
-        const disposition = res.headers.get("Content-Disposition") ?? "";
-        const match = disposition.match(/filename="?(.+?)"?$/);
-        const fileName = match ? decodeURIComponent(match[1]) : "download";
-
-        setHistory(
-            addHistoryEntry({
-                title: result.title,
-                sizeMB: blob.size / (1024 * 1024),
-                format,
-                sourceUrl: originalUrl,
-                isPlaylist: false,
-            })
-        );
-
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = fileName;
-        link.click();
-        URL.revokeObjectURL(link.href);
     }
 
     async function handlePlaylistDownload(formatSelector: string) {
@@ -151,6 +167,21 @@ export default function HomePage() {
         setOriginalUrl("");
     }
 
+    async function handleCancel() {
+        if (activeFetch.current) {
+            activeFetch.current.abort();
+        }
+        
+        const socket = getSocket();
+        await fetch(`${API_URL}/api/download/cancel`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ socketId: socket.id }),
+        }).catch(console.error);
+
+        setCola(null);
+    }
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
             <section aria-label="Dynamic view">
@@ -187,7 +218,14 @@ export default function HomePage() {
 
             <aside aria-label="Persistent state" className="flex flex-col gap-4">
                 <div className="border border-neutral-800 rounded-xl p-4">
-                    <h2 className="text-sm font-medium text-neutral-400 mb-2">Cola</h2>
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-sm font-medium text-neutral-400">Cola</h2>
+                        {cola && (
+                            <button onClick={handleCancel} className="text-xs font-medium text-red-500 hover:text-red-400 transition-colors">
+                                Cancelar
+                            </button>
+                        )}
+                    </div>
                     {!cola && <p className="text-neutral-500 text-sm">No active downloads</p>}
 
                     {cola?.kind === "single" && (

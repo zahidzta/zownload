@@ -36,7 +36,8 @@ export async function runDownload(
     url: string,
     formatSelector: string,
     target: "mp3" | "mp4",
-    onProgress?: (update: ProgressUpdate) => void
+    onProgress?: (update: ProgressUpdate) => void,
+    signal?: AbortSignal
 ): Promise<DownloadResult> {
     const jobId = randomUUID()
     const jobDir = path.join(DOWNLOADS_DIR, jobId)
@@ -49,7 +50,8 @@ export async function runDownload(
         "-f", formatSelector,
         "-o", outputTemplate,
         "--no-warnings",
-        "--newline"
+        "--newline",
+        "--extractor-args", "youtube:player_client=default,ios"
     ]
 
     if (target === "mp3") {
@@ -77,13 +79,28 @@ export async function runDownload(
             }
         }
 
+        const onAbort = () => {
+            proc.kill("SIGTERM")
+            reject(new Error("Download aborted"))
+        }
+
+        if (signal) {
+            if (signal.aborted) {
+                return onAbort()
+            }
+            signal.addEventListener("abort", onAbort)
+        }
+
         proc.stdout.on("data", (chunk) => handleChunk(chunk, false))
         proc.stderr.on("data", (chunk) => handleChunk(chunk, true))
 
         proc.on("error", reject)
         proc.on("close", (code) => {
-            if (code === 0) {
-                resolve()
+            if (signal) signal.removeEventListener("abort", onAbort)
+            
+            if (code === 0 || (code === null && signal?.aborted)) {
+                if (signal?.aborted) reject(new Error("Download aborted"))
+                else resolve()
             } else {
                 const detail = errorLines.slice(-5).join(" | ") || "no error output captured"
                 reject(new Error(`yt-dlp exited with code ${code}: ${detail}`))

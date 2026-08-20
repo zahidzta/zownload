@@ -30,13 +30,18 @@ export async function processPlaylist(
     items: PlaylistItemInput[],
     formatSelector: string,
     format: "mp3" | "mp4",
-    emit: (event: string, payload: unknown) => void
+    emit: (event: string, payload: unknown) => void,
+    signal?: AbortSignal
 ) {
     const total = items.length
 
     for (let i = 0; i < total; i++) {
-        const item = items[i]
+        if (signal?.aborted) {
+            console.log(`Playlist processing aborted at item ${i + 1}`)
+            break
+        }
 
+        const item = items[i]
 
         emit("playlist:item:start", { index: i + 1, total, title: item.title })
 
@@ -45,7 +50,8 @@ export async function processPlaylist(
                 item.url,
                 formatSelector,
                 format,
-                (update: ProgressUpdate) => emit("playlist:item:progress", { index: i + 1, total, ...update })
+                (update: ProgressUpdate) => emit("playlist:item:progress", { index: i + 1, total, ...update }),
+                signal
             )
 
             registerFile(jobId, item.id, { filePath, fileName, cleanup })
@@ -58,6 +64,11 @@ export async function processPlaylist(
                 downloadUrl: `/api/download/file/${jobId}/${item.id}`
             })
         } catch (err) {
+            if (signal?.aborted) {
+                console.log(`Playlist download aborted during item ${item.id}`)
+                break
+            }
+            
             console.error(`Playlist item ${item.id} failed:`, err)
             emit("playlist:item:error", {
                 index: i + 1,
@@ -68,5 +79,7 @@ export async function processPlaylist(
         }
     }
 
-    emit("playlist:complete", { total })
+    if (!signal?.aborted) {
+        emit("playlist:complete", { total })
+    }
 }
