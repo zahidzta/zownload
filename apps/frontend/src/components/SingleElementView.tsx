@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SingleMediaResult, TargetFormat } from "@zownload/shared";
+import { FiClock, FiFile, FiDownload } from "react-icons/fi";
 
 interface Props {
     result: SingleMediaResult;
@@ -13,7 +14,7 @@ function formatDuration(seconds?: number): string {
     if (!seconds) return "—";
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
 export function SingleElementView({ result, format, onDownload }: Props) {
@@ -24,33 +25,50 @@ export function SingleElementView({ result, format, onDownload }: Props) {
     const selected = result.formats.find((f) => f.formatId === selectedFormatId);
 
     return (
-        <div className="border border-neutral-800 rounded-xl overflow-hidden">
-            {result.thumbnail && (
-                <img
-                    src={result.thumbnail}
-                    alt={result.title}
-                    className="w-full aspect-video object-cover"
-                />
-            )}
-
-            <div className="p-6 space-y-4">
-                <div>
-                    <p className="font-medium text-lg leading-snug">{result.title}</p>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-neutral-400">
-                        {result.artist && <span>{result.artist}</span>}
-                        <span>·</span>
-                        <span>{formatDuration(result.duration)}</span>
-                        <span>·</span>
-                        <span>{result.platform}</span>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden w-full max-w-3xl">
+            {/* Top Section */}
+            <div className="flex flex-row items-center gap-5 p-5">
+                {result.thumbnail && (
+                    <img
+                        src={result.thumbnail}
+                        alt={result.title}
+                        className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                    />
+                )}
+                
+                <div className="flex flex-col flex-grow min-w-0">
+                    <h2 className="text-2xl font-bold text-neutral-100 truncate">
+                        {result.title}
+                    </h2>
+                    {result.artist && (
+                        <p className="text-neutral-400 mt-1 truncate">
+                            {result.artist}
+                        </p>
+                    )}
+                    
+                    <div className="flex items-center gap-3 mt-3">
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-neutral-800 rounded-full text-xs text-neutral-300 font-medium">
+                            <FiClock className="w-3.5 h-3.5 text-neutral-400" />
+                            <span>{formatDuration(result.duration)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-neutral-800 rounded-full text-xs text-neutral-300 font-medium">
+                            <FiFile className="w-3.5 h-3.5 text-neutral-400" />
+                            <span>{result.platform || "Media"}</span>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div>
-                    <label className="block text-sm text-neutral-400 mb-2">Calidad</label>
+            <hr className="border-neutral-800" />
+
+            {/* Bottom Section */}
+            <div className="p-5 flex flex-row items-end justify-between">
+                <div className="flex flex-col w-64">
+                    <label className="text-xs text-neutral-400 font-medium mb-1.5">Calidad</label>
                     <select
                         value={selectedFormatId}
                         onChange={(e) => setSelectedFormatId(e.target.value)}
-                        className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2.5 text-sm outline-none"
+                        className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-neutral-300 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                     >
                         {result.formats.map((f) => (
                             <option key={f.formatId} value={f.formatId}>
@@ -63,9 +81,10 @@ export function SingleElementView({ result, format, onDownload }: Props) {
                 <button
                     onClick={() => selected && onDownload(selected.formatSelector)}
                     disabled={!selected}
-                    className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg py-3 text-sm font-medium transition-colors"
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg px-6 py-2.5 text-sm font-medium transition-colors"
                 >
-                    Descargar {format.toUpperCase()}
+                    <FiDownload className="w-4 h-4" />
+                    <span>Descargar</span>
                 </button>
             </div>
         </div>
