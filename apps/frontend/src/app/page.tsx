@@ -8,7 +8,7 @@ import { PlaylistView } from "@/components/PlaylistView";
 import { HistoryCard } from "@/components/HistoryCard";
 import { API_URL } from "@/lib/config";
 import { getSocket } from "@/lib/socket";
-import { getHistory, addHistoryEntry, type HistoryEntry } from "@/lib/history";
+import { getHistory, addHistoryEntry, clearHistory, type HistoryEntry } from "@/lib/history";
 import { FiTrash2 } from "react-icons/fi";
 
 type ColaState =
@@ -259,7 +259,10 @@ export default function HomePage() {
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-sm font-medium text-neutral-400">History</h2>
                         <button
-                            onClick={() => setHistory([])}
+                            onClick={() => {
+                                clearHistory();
+                                setHistory([]);
+                            }}
                             className="p-1.5 text-neutral-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors flex items-center justify-center"
                             title="Clear History"
                         >
