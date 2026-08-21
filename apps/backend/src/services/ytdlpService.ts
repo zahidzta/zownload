@@ -48,9 +48,13 @@ function buildSingleResult(data: any, format: TargetFormat): SingleMediaResult {
                     const label = [resolution, "mp4", formatBytes(size) && `~${formatBytes(size)}`]
                         .filter(Boolean)
                         .join(" · ") || f.format_id;
+                    
+                    const hasAudio = f.acodec && f.acodec !== "none";
+                    const formatSelector = hasAudio ? f.format_id : `${f.format_id}+bestaudio/${f.format_id}`;
+
                     return {
                         formatId: f.format_id,
-                        formatSelector: `${f.format_id}+bestaudio`,
+                        formatSelector,
                         label,
                         ext: "mp4",
                         resolution,
@@ -125,6 +129,7 @@ export async function analyzeUrl(url: string, format: TargetFormat): Promise<Ana
         "--dump-single-json",
         "--no-warnings",
         "--flat-playlist",
+        "--impersonate", "chrome-110"
     ]);
 
     const data = JSON.parse(raw);

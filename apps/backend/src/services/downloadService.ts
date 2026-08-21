@@ -51,7 +51,8 @@ export async function runDownload(
         "-o", outputTemplate,
         "--no-warnings",
         "--newline",
-        "--extractor-args", "youtube:player_client=default,ios"
+        "--extractor-args", "youtube:player_client=default,ios",
+        "--impersonate", "chrome-110"
     ]
 
     if (target === "mp3") {
