@@ -51,9 +51,13 @@ export async function runDownload(
         "-o", outputTemplate,
         "--no-warnings",
         "--newline",
-        "--extractor-args", "youtube:player_client=default,ios",
-        "--impersonate", "chrome-110"
     ]
+
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        args.push("--extractor-args", "youtube:player_client=android");
+    } else {
+        args.push("--impersonate", "chrome-110");
+    }
 
     if (target === "mp3") {
         args.push("--extract-audio", "--audio-format", "mp3")

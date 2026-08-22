@@ -23,7 +23,7 @@ function buildSingleResult(data: any, format: TargetFormat): SingleMediaResult {
     const formats: FormatOption[] =
         format === "mp3"
             ? rawFormats
-                .filter((f: any) => f.format_id && f.acodec !== "none" && (f.vcodec === "none" || !f.vcodec))
+                .filter((f: any) => f.format_id && f.acodec !== "none")
                 .map((f: any) => {
                     const size = f.filesize ?? f.filesize_approx ?? null;
                     const abr = f.abr ? `${Math.round(f.abr)}kbps` : undefined;
@@ -103,12 +103,12 @@ function buildPlaylistResult(data: any, format: TargetFormat): PlaylistMediaResu
     const qualityOptions =
         format === "mp3"
             ? [
-                { label: "Max" as const, formatSelector: "bestaudio" },
-                { label: "Min" as const, formatSelector: "worstaudio" },
+                { label: "Max" as const, formatSelector: "bestaudio/best" },
+                { label: "Min" as const, formatSelector: "worstaudio/worst" },
             ]
             : [
-                { label: "Max" as const, formatSelector: "bestvideo+bestaudio" },
-                { label: "Min" as const, formatSelector: "worstvideo+worstaudio" },
+                { label: "Max" as const, formatSelector: "bestvideo+bestaudio/best" },
+                { label: "Min" as const, formatSelector: "worstvideo+worstaudio/worst" },
             ]
 
     return {
@@ -124,13 +124,20 @@ function buildPlaylistResult(data: any, format: TargetFormat): PlaylistMediaResu
 }
 
 export async function analyzeUrl(url: string, format: TargetFormat): Promise<AnalyzeResult> {
-    const raw = await ytDlpWrap.execPromise([
+    const args = [
         url,
         "--dump-single-json",
         "--no-warnings",
         "--flat-playlist",
-        "--impersonate", "chrome-110"
-    ]);
+    ];
+
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        args.push("--extractor-args", "youtube:player_client=android");
+    } else {
+        args.push("--impersonate", "chrome-110");
+    }
+
+    const raw = await ytDlpWrap.execPromise(args);
 
     const data = JSON.parse(raw);
 
