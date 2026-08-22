@@ -51,6 +51,9 @@ export async function runDownload(
         "-o", outputTemplate,
         "--no-warnings",
         "--newline",
+        "--embed-thumbnail",
+        "--embed-metadata",
+        "--convert-thumbnails", "jpg",
     ]
 
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
