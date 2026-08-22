@@ -8,6 +8,7 @@ interface Props {
     result: SingleMediaResult;
     format: TargetFormat;
     onDownload: (formatSelector: string) => void;
+    isDownloading?: boolean;
 }
 
 function formatDuration(seconds?: number): string {
@@ -17,7 +18,7 @@ function formatDuration(seconds?: number): string {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export function SingleElementView({ result, format, onDownload }: Props) {
+export function SingleElementView({ result, format, onDownload, isDownloading }: Props) {
     const [selectedFormatId, setSelectedFormatId] = useState(
         result.formats[0]?.formatId ?? ""
     );
@@ -68,7 +69,8 @@ export function SingleElementView({ result, format, onDownload }: Props) {
                     <select
                         value={selectedFormatId}
                         onChange={(e) => setSelectedFormatId(e.target.value)}
-                        className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-neutral-300 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                        disabled={isDownloading}
+                        className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-neutral-300 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all disabled:opacity-50"
                     >
                         {result.formats.map((f) => (
                             <option key={f.formatId} value={f.formatId}>
@@ -80,11 +82,11 @@ export function SingleElementView({ result, format, onDownload }: Props) {
 
                 <button
                     onClick={() => selected && onDownload(selected.formatSelector)}
-                    disabled={!selected}
+                    disabled={!selected || isDownloading}
                     className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg px-6 py-2.5 text-sm font-medium transition-colors"
                 >
                     <FiDownload className="w-4 h-4" />
-                    <span>Descargar</span>
+                    <span>{isDownloading ? "Descargando..." : "Descargar"}</span>
                 </button>
             </div>
         </div>

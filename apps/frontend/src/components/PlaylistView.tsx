@@ -8,9 +8,10 @@ interface Props {
     result: PlaylistMediaResult;
     format: TargetFormat;
     onDownload: (formatSelector: string) => void;
+    isDownloading?: boolean;
 }
 
-export function PlaylistView({ result, format, onDownload }: Props) {
+export function PlaylistView({ result, format, onDownload, isDownloading }: Props) {
     const [selectedLabel, setSelectedLabel] = useState<"Max" | "Min">("Max");
 
     const selected = result.qualityOptions.find((q) => q.label === selectedLabel);
@@ -78,7 +79,8 @@ export function PlaylistView({ result, format, onDownload }: Props) {
                             <select
                                 value={selectedLabel}
                                 onChange={(e) => setSelectedLabel(e.target.value as "Max" | "Min")}
-                                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-4 pr-10 py-3.5 sm:py-4 text-sm sm:text-base text-neutral-200 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer"
+                                disabled={isDownloading}
+                                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-4 pr-10 py-3.5 sm:py-4 text-sm sm:text-base text-neutral-200 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer disabled:opacity-50"
                             >
                                 {result.qualityOptions.map((q) => (
                                     <option key={q.label} value={q.label}>
@@ -96,11 +98,11 @@ export function PlaylistView({ result, format, onDownload }: Props) {
 
                     <button
                         onClick={() => selected && onDownload(selected.formatSelector)}
-                        disabled={!selected}
+                        disabled={!selected || isDownloading}
                         className="w-full mt-6 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl py-4 text-sm sm:text-base font-semibold transition-colors shadow-lg shadow-blue-900/20"
                     >
                         <FiDownload className="w-5 h-5" />
-                        <span>Descargar</span>
+                        <span>{isDownloading ? "Descargando..." : "Descargar"}</span>
                     </button>
                 </div>
             </div>

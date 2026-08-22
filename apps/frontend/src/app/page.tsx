@@ -208,11 +208,11 @@ export default function HomePage() {
                 )}
 
                 {result?.type === "single" && (
-                    <SingleElementView result={result} format={format} onDownload={handleSingleDownload} />
+                    <SingleElementView result={result} format={format} onDownload={handleSingleDownload} isDownloading={cola !== null} />
                 )}
 
                 {result?.type === "playlist" && (
-                    <PlaylistView result={result} format={format} onDownload={handlePlaylistDownload} />
+                    <PlaylistView result={result} format={format} onDownload={handlePlaylistDownload} isDownloading={cola !== null} />
                 )}
             </section>
 
