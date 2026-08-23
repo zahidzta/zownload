@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { AnalyzeResult, TargetFormat } from "@zownload/shared";
 import { UrlInputForm } from "@/components/UrlInputForm";
 import { SingleElementView } from "@/components/SingleElementView";
@@ -19,6 +20,7 @@ type ColaState =
 
 
 export default function HomePage() {
+    const { t } = useTranslation();
     const [result, setResult] = useState<AnalyzeResult | null>(null);
     const [originalUrl, setOriginalUrl] = useState("");
     const [format, setFormat] = useState<TargetFormat>("mp3");
@@ -193,7 +195,7 @@ export default function HomePage() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        Volver
+                        {t("volver")}
                     </button>
                 )}
 
@@ -219,14 +221,14 @@ export default function HomePage() {
             <aside aria-label="Persistent state" className="flex flex-col gap-4">
                 <div className="border border-neutral-800 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-sm font-medium text-neutral-400">Cola</h2>
+                        <h2 className="text-sm font-medium text-neutral-400">{t("cola")}</h2>
                         {cola && (
                             <button onClick={handleCancel} className="text-xs font-medium text-red-500 hover:text-red-400 transition-colors">
-                                Cancelar
+                                {t("cancelar")}
                             </button>
                         )}
                     </div>
-                    {!cola && <p className="text-neutral-500 text-sm">No active downloads</p>}
+                    {!cola && <p className="text-neutral-500 text-sm">{t("no_active_downloads")}</p>}
 
                     {cola?.kind === "single" && (
                         <div className="space-y-1">
@@ -234,7 +236,7 @@ export default function HomePage() {
                                 <div className="h-full bg-blue-500 transition-all" style={{ width: `${cola.percent}%` }} />
                             </div>
                             <p className="text-xs text-neutral-500">
-                                {cola.percent}% {cola.speed && `· ${cola.speed}`} {cola.eta && `· ETA ${cola.eta}`}
+                                {cola.percent}% {cola.speed && `· ${cola.speed}`} {cola.eta && `· ${t("eta")} ${cola.eta}`}
                             </p>
                         </div>
                     )}
@@ -242,14 +244,14 @@ export default function HomePage() {
                     {cola?.kind === "playlist" && (
                         <div className="space-y-1">
                             <p className="text-xs text-neutral-400">
-                                Item {cola.index}/{cola.total}
+                                {t("item_progress", { index: cola.index, total: cola.total })}
                                 {cola.title && ` · ${cola.title}`}
                             </p>
                             <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
                                 <div className="h-full bg-blue-500 transition-all" style={{ width: `${cola.percent ?? 0}%` }} />
                             </div>
                             <p className="text-xs text-neutral-500">
-                                {cola.percent ?? 0}% {cola.speed && `· ${cola.speed}`} {cola.eta && `· ETA ${cola.eta}`}
+                                {cola.percent ?? 0}% {cola.speed && `· ${cola.speed}`} {cola.eta && `· ${t("eta")} ${cola.eta}`}
                             </p>
                         </div>
                     )}
@@ -257,14 +259,14 @@ export default function HomePage() {
 
                 <div className="border border-neutral-800 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-sm font-medium text-neutral-400">History</h2>
+                        <h2 className="text-sm font-medium text-neutral-400">{t("history")}</h2>
                         <button
                             onClick={() => {
                                 clearHistory();
                                 setHistory([]);
                             }}
                             className="p-1.5 text-neutral-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors flex items-center justify-center"
-                            title="Clear History"
+                            title={t("clear_history")}
                         >
                             <FiTrash2 size={16} />
                         </button>

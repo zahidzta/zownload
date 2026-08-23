@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { SingleMediaResult, TargetFormat } from "@zownload/shared";
 import { FiClock, FiFile, FiDownload } from "react-icons/fi";
 
@@ -19,6 +20,7 @@ function formatDuration(seconds?: number): string {
 }
 
 export function SingleElementView({ result, format, onDownload, isDownloading }: Props) {
+    const { t } = useTranslation();
     const [selectedFormatId, setSelectedFormatId] = useState(
         result.formats[0]?.formatId ?? ""
     );
@@ -65,7 +67,7 @@ export function SingleElementView({ result, format, onDownload, isDownloading }:
             {/* Bottom Section */}
             <div className="p-5 flex flex-row items-end justify-between">
                 <div className="flex flex-col w-64">
-                    <label className="text-xs text-neutral-400 font-medium mb-1.5">Calidad</label>
+                    <label className="text-xs text-neutral-400 font-medium mb-1.5">{t("quality")}</label>
                     <select
                         value={selectedFormatId}
                         onChange={(e) => setSelectedFormatId(e.target.value)}
@@ -86,7 +88,7 @@ export function SingleElementView({ result, format, onDownload, isDownloading }:
                     className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg px-6 py-2.5 text-sm font-medium transition-colors"
                 >
                     <FiDownload className="w-4 h-4" />
-                    <span>{isDownloading ? "Descargando..." : "Descargar"}</span>
+                    <span>{isDownloading ? t("downloading") : t("download")}</span>
                 </button>
             </div>
         </div>

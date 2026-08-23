@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { PlaylistMediaResult, TargetFormat } from "@zownload/shared";
 import { FiDownload } from "react-icons/fi";
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function PlaylistView({ result, format, onDownload, isDownloading }: Props) {
+    const { t } = useTranslation();
     const [selectedLabel, setSelectedLabel] = useState<"Max" | "Min">("Max");
 
     const selected = result.qualityOptions.find((q) => q.label === selectedLabel);
@@ -38,7 +40,7 @@ export function PlaylistView({ result, format, onDownload, isDownloading }: Prop
                     
                     <div className="mt-6 text-center space-y-1.5 pb-2">
                         <p className="font-bold text-neutral-100 text-xl line-clamp-1">{result.title}</p>
-                        <p className="text-neutral-400 text-sm line-clamp-1">{result.artist || "Playlist"}</p>
+                        <p className="text-neutral-400 text-sm line-clamp-1">{result.artist || t("various_artists")}</p>
                         <p className="text-neutral-500 text-xs mt-2 uppercase tracking-wide font-medium">Playlist • {result.itemCount} items</p>
                     </div>
                 </div>
@@ -49,21 +51,21 @@ export function PlaylistView({ result, format, onDownload, isDownloading }: Prop
                         {result.title}
                     </h1>
                     <p className="text-xl text-neutral-400 mt-2 sm:mt-4">
-                        {result.artist || "Various Artists"}
+                        {result.artist || t("various_artists")}
                     </p>
 
                     <div className="flex flex-row gap-3 sm:gap-4 mt-8 sm:mt-10">
                         <div className="flex-1 bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-5">
                             <p className="text-[10px] sm:text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
-                                CANT. ELEMENTOS
+                                {t("elements_count")}
                             </p>
                             <p className="text-lg sm:text-xl font-semibold text-neutral-200">
-                                {result.itemCount} Tracks
+                                {result.itemCount} {t("tracks")}
                             </p>
                         </div>
                         <div className="flex-1 bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-5">
                             <p className="text-[10px] sm:text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
-                                FORMATO
+                                {t("format")}
                             </p>
                             <p className="text-lg sm:text-xl font-semibold text-neutral-200">
                                 {format.toUpperCase()}
@@ -73,7 +75,7 @@ export function PlaylistView({ result, format, onDownload, isDownloading }: Prop
 
                     <div className="mt-6 sm:mt-8">
                         <label className="block text-sm font-semibold text-neutral-400 mb-2.5">
-                            Quality
+                            {t("quality")}
                         </label>
                         <div className="relative">
                             <select
@@ -102,7 +104,7 @@ export function PlaylistView({ result, format, onDownload, isDownloading }: Prop
                         className="w-full mt-6 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl py-4 text-sm sm:text-base font-semibold transition-colors shadow-lg shadow-blue-900/20"
                     >
                         <FiDownload className="w-5 h-5" />
-                        <span>{isDownloading ? "Descargando..." : "Descargar"}</span>
+                        <span>{isDownloading ? t("downloading") : t("download")}</span>
                     </button>
                 </div>
             </div>
@@ -110,7 +112,7 @@ export function PlaylistView({ result, format, onDownload, isDownloading }: Prop
             {/* Tracks List */}
             <div className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-6 shadow-sm">
                 <h3 className="text-neutral-400 font-semibold mb-4 text-sm uppercase tracking-wider">
-                    Tracks en la lista
+                    {t("tracks_in_list")}
                 </h3>
                 <div className="max-h-72 overflow-y-auto space-y-1.5 pr-2">
                     {result.items.map((item, i) => (
