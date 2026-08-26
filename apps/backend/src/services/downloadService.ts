@@ -43,12 +43,14 @@ export async function runDownload(
     const jobDir = path.join(DOWNLOADS_DIR, jobId)
     await mkdir(jobDir, { recursive: true })
 
-    const outputTemplate = path.join(jobDir, "%(title)s.%(ext)s")
+    const outputTemplate = path.join(jobDir, "%(title).80s.%(ext)s")
 
     const args = [
         url,
         "-f", formatSelector,
         "-o", outputTemplate,
+        "--trim-filenames", "80",
+        "--windows-filenames",
         "--no-warnings",
         "--newline",
         "--embed-thumbnail",
@@ -122,7 +124,11 @@ export async function runDownload(
         throw new Error("yt-dlp completed but no output file was found.")
     }
 
-    const fileName = files[0]
+    // Filter out thumbnails and temporary files, preferring the requested target format
+    const mediaFiles = files.filter(
+        (f) => !f.endsWith(".jpg") && !f.endsWith(".webp") && !f.endsWith(".part") && !f.endsWith(".temp")
+    )
+    const fileName = mediaFiles.find((f) => f.endsWith(`.${target}`)) ?? mediaFiles[0] ?? files[0]
     const filePath = path.join(jobDir, fileName)
     const { size } = await stat(filePath)
 
