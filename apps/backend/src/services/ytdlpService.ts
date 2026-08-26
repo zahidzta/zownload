@@ -17,6 +17,66 @@ function formatBytes(bytes?: number | null): string | null {
     return `${mb.toFixed(1)}MB`;
 }
 
+function cleanThumbnailUrl(url?: string): string | undefined {
+    if (!url || typeof url !== "string") return undefined;
+    const trimmed = url.trim();
+    if (!trimmed) return undefined;
+
+    // Direct YouTube image URL (e.g. i.ytimg.com/vi/ID/... or i.ytimg.com/vi_webp/ID/...)
+    const ytMatch = trimmed.match(/https?:\/\/(?:i\.ytimg\.com|img\.youtube\.com)\/(?:vi|vi_webp)\/([a-zA-Z0-9_-]{11})/);
+    if (ytMatch && ytMatch[1]) {
+        return `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+    }
+
+    if (trimmed.includes("i.ytimg.com") && trimmed.includes("?")) {
+        return trimmed.split("?")[0];
+    }
+
+    return trimmed;
+}
+
+function extractThumbnail(obj: any): string | undefined {
+    if (!obj) return undefined;
+
+    // Check string thumbnail
+    if (typeof obj.thumbnail === "string" && obj.thumbnail.trim()) {
+        const cleaned = cleanThumbnailUrl(obj.thumbnail);
+        if (cleaned && !cleaned.includes("no_thumbnail")) return cleaned;
+    }
+
+    // Check object thumbnail.url
+    if (obj.thumbnail && typeof obj.thumbnail === "object" && typeof obj.thumbnail.url === "string") {
+        const cleaned = cleanThumbnailUrl(obj.thumbnail.url);
+        if (cleaned && !cleaned.includes("no_thumbnail")) return cleaned;
+    }
+
+    // Check thumbnails array (prefer highest resolution at end)
+    if (Array.isArray(obj.thumbnails) && obj.thumbnails.length > 0) {
+        for (let i = obj.thumbnails.length - 1; i >= 0; i--) {
+            const t = obj.thumbnails[i];
+            const rawUrl = typeof t === "string" ? t : t?.url;
+            if (rawUrl && typeof rawUrl === "string") {
+                const cleaned = cleanThumbnailUrl(rawUrl);
+                if (cleaned && !cleaned.includes("no_thumbnail")) return cleaned;
+            }
+        }
+    }
+
+    // Direct YouTube ID or URL fallback
+    const videoId =
+        typeof obj.id === "string" && /^[a-zA-Z0-9_-]{11}$/.test(obj.id)
+            ? obj.id
+            : typeof obj.url === "string"
+                ? obj.url.match(/(?:v=|youtu\.be\/|\/v\/|\/embed\/)([a-zA-Z0-9_-]{11})/)?.[1]
+                : undefined;
+
+    if (videoId) {
+        return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    }
+
+    return undefined;
+}
+
 function buildSingleResult(data: any, format: TargetFormat): SingleMediaResult {
     const rawFormats = data.formats ?? []
 
@@ -81,8 +141,8 @@ function buildSingleResult(data: any, format: TargetFormat): SingleMediaResult {
         type: "single",
         id: data.id,
         title: data.title,
-        artist: data.uploader ?? data.channel ?? undefined,
-        thumbnail: data.thumbnail,
+        artist: data.uploader ?? data.channel ?? data.artist ?? undefined,
+        thumbnail: extractThumbnail(data),
         duration: data.duration,
         platform: data.extractor_key ?? data.extractor,
         requiresExtraction: format === "mp3",
@@ -91,13 +151,30 @@ function buildSingleResult(data: any, format: TargetFormat): SingleMediaResult {
 }
 
 function buildPlaylistResult(data: any, format: TargetFormat): PlaylistMediaResult {
-    const playlistThumbnail = data.thumbnails?.[data.thumbnails.length - 1]?.url ?? data.thumbnail
-    const items = (data.entries ?? []).map((e: any) => ({
+    const entries = Array.isArray(data.entries) ? data.entries : [];
+
+    // For playlists, check the track entries first to get actual album/video art
+    // instead of YouTube's generic composite placeholder icon
+    let playlistThumbnail: string | undefined = undefined;
+
+    for (const entry of entries) {
+        const thumb = extractThumbnail(entry);
+        if (thumb) {
+            playlistThumbnail = thumb;
+            break;
+        }
+    }
+
+    if (!playlistThumbnail) {
+        playlistThumbnail = extractThumbnail(data);
+    }
+
+    const items = entries.map((e: any) => ({
         id: e.id,
         title: e.title,
         duration: e.duration,
-        thumbnail: format === "mp3" ? playlistThumbnail : (e.thumbnail ?? e.thumbnails?.[0]?.url ?? playlistThumbnail),
-        url: e.url ?? e.webpage_url
+        thumbnail: extractThumbnail(e) ?? playlistThumbnail,
+        url: e.url ?? (e.id ? `https://www.youtube.com/watch?v=${e.id}` : e.webpage_url)
     }));
 
     const qualityOptions =
@@ -115,7 +192,7 @@ function buildPlaylistResult(data: any, format: TargetFormat): PlaylistMediaResu
         type: "playlist",
         id: data.id,
         title: data.title,
-        artist: data.uploader ?? data.channel ?? undefined,
+        artist: data.uploader ?? data.channel ?? data.artist ?? undefined,
         thumbnail: playlistThumbnail,
         itemCount: items.length,
         items,

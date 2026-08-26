@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { PlaylistMediaResult, TargetFormat } from "@zownload/shared";
 import { FiDownload } from "react-icons/fi";
@@ -15,6 +15,13 @@ interface Props {
 export function PlaylistView({ result, format, onDownload, isDownloading }: Props) {
     const { t } = useTranslation();
     const [selectedLabel, setSelectedLabel] = useState<"Max" | "Min">("Max");
+    const [imgSrc, setImgSrc] = useState<string | null>(
+        result.thumbnail || result.items?.find((i) => i.thumbnail)?.thumbnail || null
+    );
+
+    useEffect(() => {
+        setImgSrc(result.thumbnail || result.items?.find((i) => i.thumbnail)?.thumbnail || null);
+    }, [result]);
 
     const selected = result.qualityOptions.find((q) => q.label === selectedLabel);
 
@@ -24,12 +31,21 @@ export function PlaylistView({ result, format, onDownload, isDownloading }: Prop
                 
                 {/* Left Section: Cover Card */}
                 <div className="w-full md:w-[320px] lg:w-[360px] shrink-0 bg-neutral-900 border border-neutral-800 rounded-3xl p-6 flex flex-col">
-                    <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-xl border border-neutral-800/50 bg-neutral-950">
-                        {result.thumbnail ? (
+                    <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-xl border border-neutral-800/50 bg-neutral-950 flex items-center justify-center">
+                        {imgSrc ? (
                             <img
-                                src={result.thumbnail}
+                                src={imgSrc}
                                 alt={result.title}
                                 className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                                onError={() => {
+                                    const fallback = result.items?.find((i) => i.thumbnail && i.thumbnail !== imgSrc)?.thumbnail;
+                                    if (fallback) {
+                                        setImgSrc(fallback);
+                                    } else {
+                                        setImgSrc(null);
+                                    }
+                                }}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-neutral-700">

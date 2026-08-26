@@ -36,6 +36,7 @@ export function SingleElementView({ result, format, onDownload, isDownloading }:
                         src={result.thumbnail}
                         alt={result.title}
                         className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                        referrerPolicy="no-referrer"
                     />
                 )}
                 
