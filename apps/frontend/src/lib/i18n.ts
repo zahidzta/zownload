@@ -30,6 +30,15 @@ const resources = {
       error_generic: "Something went wrong.",
       analyzing: "Analyzing...",
       convert: "Convert",
+      status_preparing: "Preparing download...",
+      status_downloading_video: "Downloading video stream...",
+      status_downloading_audio: "Downloading audio stream...",
+      status_downloading: "Downloading...",
+      status_merging: "Merging audio & video...",
+      status_converting: "Converting audio to MP3...",
+      status_processing: "Processing artwork & metadata...",
+      status_finalizing: "Finalizing file...",
+      status_complete: "Complete!",
     }
   },
   es: {
@@ -59,6 +68,15 @@ const resources = {
       error_generic: "Algo salió mal.",
       analyzing: "Analizando...",
       convert: "Convertir",
+      status_preparing: "Preparando descarga...",
+      status_downloading_video: "Descargando video...",
+      status_downloading_audio: "Descargando audio...",
+      status_downloading: "Descargando...",
+      status_merging: "Combinando video y audio...",
+      status_converting: "Convirtiendo audio a MP3...",
+      status_processing: "Procesando portada y metadatos...",
+      status_finalizing: "Finalizando archivo...",
+      status_complete: "¡Completado!",
     }
   }
 };

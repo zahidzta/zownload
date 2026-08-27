@@ -34,8 +34,14 @@ downloadRouter.post("/download/cancel", (req, res) => {
 downloadRouter.post("/download", async (req, res) => {
     const { url, formatSelector, format, socketId } = req.body ?? {}
 
-    if (!url || !formatSelector || (format !== "mp3" && format !== "mp4")) {
-        return res.status(400).json({ error: "url, formatSelector, and format are required." })
+    if (
+        !url ||
+        typeof url !== "string" ||
+        (!url.startsWith("http://") && !url.startsWith("https://")) ||
+        !formatSelector ||
+        (format !== "mp3" && format !== "mp4")
+    ) {
+        return res.status(400).json({ error: "A valid 'url' (http/https), 'formatSelector', and 'format' are required." })
     }
 
     const io = getIO()
@@ -97,6 +103,12 @@ downloadRouter.post("/download/playlist", (req, res) => {
     const { items, formatSelector, format, socketId } = req.body ?? {}
     if (!Array.isArray(items) || items.length === 0 || !formatSelector || (format !== "mp3" && format !== "mp4")) {
         return res.status(400).json({ error: "items[], formatSelector, and format are required." })
+    }
+
+    for (const item of items) {
+        if (!item?.url || typeof item.url !== "string" || (!item.url.startsWith("http://") && !item.url.startsWith("https://"))) {
+            return res.status(400).json({ error: "Each playlist item must have a valid http/https url." })
+        }
     }
 
     const io = getIO()

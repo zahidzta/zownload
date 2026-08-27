@@ -77,65 +77,143 @@ function extractThumbnail(obj: any): string | undefined {
     return undefined;
 }
 
+function estimateFilesize(f: any, duration?: number): number | null {
+    if (typeof f.filesize === "number" && f.filesize > 0) return f.filesize;
+    if (typeof f.filesize_approx === "number" && f.filesize_approx > 0) return f.filesize_approx;
+    const bitrate = f.tbr ?? (f.vbr ? f.vbr + (f.abr || 128) : (f.abr ?? null));
+    if (bitrate && typeof duration === "number" && duration > 0) {
+        return Math.round((bitrate * 1000 / 8) * duration);
+    }
+    return null;
+}
+
 function buildSingleResult(data: any, format: TargetFormat): SingleMediaResult {
-    const rawFormats = data.formats ?? []
+    const rawFormats = data.formats ?? [];
+    const duration = data.duration ?? 0;
 
-    const formats: FormatOption[] =
-        format === "mp3"
-            ? rawFormats
-                .filter((f: any) => f.format_id && f.acodec !== "none")
-                .map((f: any) => {
-                    const size = f.filesize ?? f.filesize_approx ?? null;
-                    const abr = f.abr ? `${Math.round(f.abr)}kbps` : undefined;
-                    const label = [abr, "mp3", formatBytes(size) && `~${formatBytes(size)}`]
-                        .filter(Boolean)
-                        .join(" · ") || f.format_id;
-                    return {
-                        formatId: f.format_id,
-                        formatSelector: f.format_id,
-                        label,
-                        ext: "mp3",
-                        filesizeApprox: size,
-                        acodec: f.acodec,
-                    };
-                })
-                .sort((a: any, b: any) => (b.filesizeApprox ?? 0) - (a.filesizeApprox ?? 0))
-            : rawFormats
-                .filter((f: any) => f.format_id && f.vcodec !== "none")
-                .map((f: any) => {
-                    const size = f.filesize ?? f.filesize_approx ?? null;
-                    const resolution = f.height ? `${f.height}p` : f.resolution ?? undefined;
-                    const label = [resolution, "mp4", formatBytes(size) && `~${formatBytes(size)}`]
-                        .filter(Boolean)
-                        .join(" · ") || f.format_id;
-                    
-                    const hasAudio = f.acodec && f.acodec !== "none";
-                    const formatSelector = hasAudio ? f.format_id : `${f.format_id}+bestaudio/${f.format_id}`;
+    if (format === "mp3") {
+        const qualities = [
+            { id: "mp3-320", quality: "320k", label: "320kbps (Best Quality)", abr: 320 },
+            { id: "mp3-256", quality: "256k", label: "256kbps (High Quality)", abr: 256 },
+            { id: "mp3-192", quality: "192k", label: "192kbps (Medium Quality)", abr: 192 },
+            { id: "mp3-128", quality: "128k", label: "128kbps (Standard)", abr: 128 },
+        ];
 
-                    return {
-                        formatId: f.format_id,
-                        formatSelector,
-                        label,
-                        ext: "mp4",
-                        resolution,
-                        filesizeApprox: size,
-                        vcodec: f.vcodec,
-                    };
-                })
-                .reduce((acc: any[], f: any) => {
-                    const existing = acc.find((x) => x.resolution === f.resolution);
-                    if (!existing) {
-                        acc.push(f);
-                    } else if ((f.filesizeApprox ?? 0) > (existing.filesizeApprox ?? 0)) {
-                        acc[acc.indexOf(existing)] = f;
-                    }
-                    return acc;
-                }, [])
-                .sort((a: FormatOption, b: FormatOption) => {
-                    const resA = parseInt(a.resolution ?? "0");
-                    const resB = parseInt(b.resolution ?? "0");
-                    return resB - resA;
-                });
+        const formats: FormatOption[] = qualities.map((q) => {
+            const approxBytes = duration > 0 ? Math.round((q.abr * 1000 / 8) * duration) : null;
+            const sizeStr = formatBytes(approxBytes);
+            const label = sizeStr ? `${q.label} · mp3 · ~${sizeStr}` : `${q.label} · mp3`;
+            return {
+                formatId: q.id,
+                formatSelector: `bestaudio/best@${q.quality}`,
+                label,
+                ext: "mp3",
+                filesizeApprox: approxBytes,
+                acodec: "mp3",
+            };
+        });
+
+        return {
+            type: "single",
+            id: data.id,
+            title: data.title,
+            artist: data.uploader ?? data.channel ?? data.artist ?? undefined,
+            thumbnail: extractThumbnail(data),
+            duration: data.duration,
+            platform: data.extractor_key ?? data.extractor,
+            requiresExtraction: true,
+            formats,
+        };
+    }
+
+    // Video streams
+    const videoStreams = rawFormats.filter(
+        (f: any) => f.format_id && f.vcodec && f.vcodec !== "none"
+    );
+
+    const mappedVideos = videoStreams.map((f: any) => {
+        const height = f.height ?? parseInt(f.resolution?.match(/(\d+)x(\d+)/)?.[2] ?? "0") ?? 0;
+        const size = estimateFilesize(f, duration);
+        const hasAudio = f.acodec && f.acodec !== "none";
+        const formatSelector = hasAudio ? f.format_id : `${f.format_id}+bestaudio/best`;
+        const isAvc = f.vcodec?.startsWith("avc") || f.vcodec?.startsWith("h264");
+
+        const isHls = f.protocol?.includes("m3u8") || f.format_id?.includes("m3u8");
+
+        let resolutionLabel = height ? `${height}p` : f.resolution ?? f.format_id;
+        if (height >= 2160) resolutionLabel = "4K (2160p)";
+        else if (height >= 1440) resolutionLabel = "1440p (2K)";
+        else if (height >= 1080) resolutionLabel = "1080p (Full HD)";
+        else if (height >= 720) resolutionLabel = "720p (HD)";
+
+        const sizeStr = formatBytes(size);
+        const label = [resolutionLabel, "mp4", sizeStr && `~${sizeStr}`]
+            .filter(Boolean)
+            .join(" · ");
+
+        return {
+            height,
+            formatId: f.format_id,
+            formatSelector,
+            label,
+            ext: "mp4",
+            resolution: `${height}p`,
+            filesizeApprox: size,
+            vcodec: f.vcodec,
+            isAvc,
+            isHls,
+            tbr: f.tbr ?? f.vbr ?? 0,
+        };
+    });
+
+    const grouped = new Map<number, typeof mappedVideos[0]>();
+    for (const v of mappedVideos) {
+        if (!v.height || v.height <= 0) continue;
+        const existing = grouped.get(v.height);
+        if (!existing) {
+            grouped.set(v.height, v);
+        } else {
+            if (existing.isHls && !v.isHls) {
+                grouped.set(v.height, v);
+            } else if (!existing.isHls && v.isHls) {
+                // Keep direct HTTPS stream
+            } else if (v.height <= 1080) {
+                if (!existing.isAvc && v.isAvc) {
+                    grouped.set(v.height, v);
+                } else if (
+                    existing.isAvc === v.isAvc &&
+                    (v.tbr > existing.tbr || (v.filesizeApprox ?? 0) > (existing.filesizeApprox ?? 0))
+                ) {
+                    grouped.set(v.height, v);
+                }
+            } else {
+                if (v.tbr > existing.tbr || (v.filesizeApprox ?? 0) > (existing.filesizeApprox ?? 0)) {
+                    grouped.set(v.height, v);
+                }
+            }
+        }
+    }
+
+    const formats: FormatOption[] = Array.from(grouped.values())
+        .sort((a, b) => b.height - a.height)
+        .map((v) => ({
+            formatId: v.formatId,
+            formatSelector: v.formatSelector,
+            label: v.label,
+            ext: "mp4",
+            resolution: v.resolution,
+            filesizeApprox: v.filesizeApprox,
+            vcodec: v.vcodec,
+        }));
+
+    if (formats.length === 0) {
+        formats.push({
+            formatId: "best",
+            formatSelector: "bestvideo+bestaudio/best",
+            label: "Best Quality · mp4",
+            ext: "mp4",
+        });
+    }
 
     return {
         type: "single",
@@ -145,16 +223,14 @@ function buildSingleResult(data: any, format: TargetFormat): SingleMediaResult {
         thumbnail: extractThumbnail(data),
         duration: data.duration,
         platform: data.extractor_key ?? data.extractor,
-        requiresExtraction: format === "mp3",
+        requiresExtraction: false,
         formats,
-    }
+    };
 }
 
 function buildPlaylistResult(data: any, format: TargetFormat): PlaylistMediaResult {
     const entries = Array.isArray(data.entries) ? data.entries : [];
 
-    // For playlists, check the track entries first to get actual album/video art
-    // instead of YouTube's generic composite placeholder icon
     let playlistThumbnail: string | undefined = undefined;
 
     for (const entry of entries) {
@@ -180,13 +256,13 @@ function buildPlaylistResult(data: any, format: TargetFormat): PlaylistMediaResu
     const qualityOptions =
         format === "mp3"
             ? [
-                { label: "Max" as const, formatSelector: "bestaudio/best" },
-                { label: "Min" as const, formatSelector: "worstaudio/worst" },
+                { label: "Max" as const, formatSelector: "bestaudio/best@320k" },
+                { label: "Min" as const, formatSelector: "worstaudio/worst@128k" },
             ]
             : [
                 { label: "Max" as const, formatSelector: "bestvideo+bestaudio/best" },
                 { label: "Min" as const, formatSelector: "worstvideo+worstaudio/worst" },
-            ]
+            ];
 
     return {
         type: "playlist",
@@ -202,17 +278,16 @@ function buildPlaylistResult(data: any, format: TargetFormat): PlaylistMediaResu
 
 export async function analyzeUrl(url: string, format: TargetFormat): Promise<AnalyzeResult> {
     const args = [
-        url,
         "--dump-single-json",
         "--no-warnings",
         "--flat-playlist",
     ];
 
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        args.push("--extractor-args", "youtube:player_client=android");
-    } else {
+    if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
         args.push("--impersonate", "chrome-110");
     }
+
+    args.push("--", url);
 
     const raw = await ytDlpWrap.execPromise(args);
 

@@ -5,8 +5,8 @@ export const analyzeRouter = Router()
 
 analyzeRouter.post("/analyze", async (req, res) => {
     const { url, format } = req.body ?? {}
-    if (!url || typeof url !== "string") {
-        return res.status(400).json({ error: "A valid 'url' string is required." })
+    if (!url || typeof url !== "string" || (!url.startsWith("http://") && !url.startsWith("https://"))) {
+        return res.status(400).json({ error: "A valid 'url' starting with http:// or https:// is required." })
     }
 
     if (format !== "mp3" && format !== "mp4") {

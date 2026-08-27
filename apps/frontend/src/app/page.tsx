@@ -13,8 +13,8 @@ import { getHistory, addHistoryEntry, clearHistory, type HistoryEntry } from "@/
 import { FiTrash2 } from "react-icons/fi";
 
 type ColaState =
-    | { kind: "single"; percent: number; speed?: string; eta?: string }
-    | { kind: "playlist"; index: number; total: number; title?: string; percent?: number; speed?: string; eta?: string }
+    | { kind: "single"; percent: number; speed?: string; eta?: string; status?: string; stage?: string }
+    | { kind: "playlist"; index: number; total: number; title?: string; percent?: number; speed?: string; eta?: string; status?: string; stage?: string }
     | null;
 
 
@@ -79,7 +79,7 @@ export default function HomePage() {
     async function handleSingleDownload(formatSelector: string) {
         if (result?.type !== "single") return;
         const socket = getSocket();
-        setCola({ kind: "single", percent: 0 });
+        setCola({ kind: "single", percent: 5, status: "status_preparing" });
 
         const abortController = new AbortController();
         activeFetch.current = abortController;
@@ -231,28 +231,62 @@ export default function HomePage() {
                     {!cola && <p className="text-neutral-500 text-sm">{t("no_active_downloads")}</p>}
 
                     {cola?.kind === "single" && (
-                        <div className="space-y-1">
-                            <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500 transition-all" style={{ width: `${cola.percent}%` }} />
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-neutral-300 font-medium flex items-center gap-2">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                    </span>
+                                    {cola.status ? t(cola.status) : t("downloading")}
+                                </span>
+                                <span className="text-neutral-400 font-mono font-semibold">{cola.percent}%</span>
                             </div>
-                            <p className="text-xs text-neutral-500">
-                                {cola.percent}% {cola.speed && `· ${cola.speed}`} {cola.eta && `· ${t("eta")} ${cola.eta}`}
-                            </p>
+                            <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400 transition-all duration-300 rounded-full"
+                                    style={{ width: `${Math.max(cola.percent, 4)}%` }}
+                                />
+                            </div>
+                            {(cola.speed || cola.eta) && (
+                                <p className="text-xs text-neutral-500 flex items-center justify-between">
+                                    {cola.speed ? <span>{cola.speed}</span> : <span />}
+                                    {cola.eta && <span>{t("eta")}: {cola.eta}</span>}
+                                </p>
+                            )}
                         </div>
                     )}
 
                     {cola?.kind === "playlist" && (
-                        <div className="space-y-1">
-                            <p className="text-xs text-neutral-400">
-                                {t("item_progress", { index: cola.index, total: cola.total })}
-                                {cola.title && ` · ${cola.title}`}
-                            </p>
-                            <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500 transition-all" style={{ width: `${cola.percent ?? 0}%` }} />
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <p className="text-neutral-400 truncate max-w-[220px]">
+                                    {t("item_progress", { index: cola.index, total: cola.total })}
+                                    {cola.title && ` · ${cola.title}`}
+                                </p>
+                                <span className="text-neutral-400 font-mono font-semibold">{cola.percent ?? 0}%</span>
                             </div>
-                            <p className="text-xs text-neutral-500">
-                                {cola.percent ?? 0}% {cola.speed && `· ${cola.speed}`} {cola.eta && `· ${t("eta")} ${cola.eta}`}
-                            </p>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-neutral-300 font-medium flex items-center gap-2">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                    </span>
+                                    {cola.status ? t(cola.status) : t("downloading")}
+                                </span>
+                            </div>
+                            <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400 transition-all duration-300 rounded-full"
+                                    style={{ width: `${Math.max(cola.percent ?? 0, 4)}%` }}
+                                />
+                            </div>
+                            {(cola.speed || cola.eta) && (
+                                <p className="text-xs text-neutral-500 flex items-center justify-between">
+                                    {cola.speed ? <span>{cola.speed}</span> : <span />}
+                                    {cola.eta && <span>{t("eta")}: {cola.eta}</span>}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
