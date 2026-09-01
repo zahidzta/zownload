@@ -57,6 +57,15 @@ The easiest way to run Zownload is using Docker. You do not need Node.js install
 - The **Frontend** will be available at `http://localhost:3000`
 - The **Backend** will be available at `http://localhost:4000`
 
+4. **Stopping the application:**
+   
+   To stop the background containers, use this command:
+
+   ```bash
+   docker compose stop
+   ```
+   *(To stop and completely remove the containers and network, you can use `docker compose down` instead).*
+
 ## Local Development Setup
 
 If you want to modify the code or run the project outside of Docker:
