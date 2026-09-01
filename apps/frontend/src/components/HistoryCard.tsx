@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import type { HistoryEntry } from "@/lib/history";
 
 interface Props {
@@ -8,8 +9,10 @@ interface Props {
 }
 
 export function HistoryCard({ entries, onRedownload }: Props) {
+    const { t } = useTranslation();
+
     if (entries.length === 0) {
-        return <p className="text-neutral-500 text-sm">No history yet</p>;
+        return <p className="text-neutral-500 text-sm">{t("no_history")}</p>;
     }
 
     return (
@@ -29,7 +32,7 @@ export function HistoryCard({ entries, onRedownload }: Props) {
                         onClick={() => onRedownload(entry)}
                         className="shrink-0 text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap"
                     >
-                        Redescargar
+                        {t("redownload")}
                     </button>
                 </div>
             ))}

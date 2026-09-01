@@ -32,3 +32,9 @@ export function addHistoryEntry(entry: Omit<HistoryEntry, "id" | "downloadedAt">
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated;
 }
+
+export function clearHistory() {
+    if (typeof window !== "undefined") {
+        localStorage.removeItem(STORAGE_KEY);
+    }
+}
