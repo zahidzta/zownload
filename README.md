@@ -66,6 +66,13 @@ The easiest way to run Zownload is using Docker. You do not need Node.js install
    ```
    *(To stop and completely remove the containers and network, you can use `docker compose down` instead).*
 
+## Remote Deployment
+
+By default, the frontend expects the backend API at http://localhost:4000. If deploying to a remote host provide your backend URL during the build:
+```toml
+NEXT_PUBLIC_API_URL=https://your-api-domain.com
+```
+
 ## Local Development Setup
 
 If you want to modify the code or run the project outside of Docker:
